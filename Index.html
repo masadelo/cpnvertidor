@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertidor MKV a MP4 - Android Optimizado</title>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: #1e1e1e; padding: 2rem; border-radius: 1.5rem; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { color: #bb86fc; font-size: 1.5rem; }
+        input[type="file"] { margin: 20px 0; width: 100%; color: #888; }
+        button { background: #03dac6; color: #000; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; font-size: 1rem; cursor: pointer; }
+        button:disabled { background: #333; color: #666; }
+        #status { margin-top: 20px; font-size: 0.9rem; color: #aaa; }
+        .progress-container { height: 10px; background: #333; border-radius: 5px; margin-top: 15px; display: none; overflow: hidden; }
+        #progress-bar { height: 100%; background: #bb86fc; width: 0%; transition: width 0.2s; }
+        #downloadBtn { display: none; margin-top: 20px; background: #bb86fc; color: #000; text-decoration: none; padding: 15px; border-radius: 10px; display: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Convertidor MKV</h1>
+    <p>Optimizado para Android</p>
+    <input type="file" id="videoInput" accept=".mkv">
+    <button id="startBtn">CONVERTIR A MP4</button>
+    
+    <div class="progress-container" id="pContainer">
+        <div id="progress-bar"></div>
+    </div>
+    
+    <p id="status">Espera a que cargue el motor...</p>
+    <a id="downloadBtn">DESCARGAR RESULTADO</a>
+</div>
+
+<script>
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({ log: true });
+    const btn = document.getElementById('startBtn');
+    const status = document.getElementById('status');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    async function init() {
+        try {
+            await ffmpeg.load();
+            status.innerText = "Motor listo. Selecciona un MKV.";
+        } catch (e) {
+            status.innerText = "Error al cargar el motor. Refresca la página.";
+        }
+    }
+
+    init();
+
+    btn.onclick = async () => {
+        const file = document.getElementById('videoInput').files[0];
+        if (!file) return alert("Selecciona un video");
+
+        btn.disabled = true;
+        downloadBtn.style.display = 'none';
+        document.getElementById('pContainer').style.display = 'block';
+        status.innerText = "Convirtiendo... (No cierres la pestaña)";
+
+        ffmpeg.setProgress(({ ratio }) => {
+            document.getElementById('progress-bar').style.width = (ratio * 100) + '%';
+        });
+
+        ffmpeg.FS('writeFile', 'input.mkv', await fetchFile(file));
+        
+        // Comando ultra-rápido para Android (Remuxing)
+        await ffmpeg.run('-i', 'input.mkv', '-c', 'copy', 'output.mp4');
+
+        const data = ffmpeg.FS('readFile', 'output.mp4');
+        const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+        
+        downloadBtn.href = url;
+        downloadBtn.download = "video_convertido.mp4";
+        downloadBtn.style.display = 'block';
+        status.innerText = "¡Listo!";
+        btn.disabled = false;
+    };
+</script>
+</body>
+  </html>
+  
